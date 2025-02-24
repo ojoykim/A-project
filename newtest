@@ -1,0 +1,135 @@
+import tkinter as tk
+from tkinter import messagebox, Toplevel
+
+# CCITT-16 CRC 계산 함수
+def ccitt16_crc(data: bytes) -> int:
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = (crc << 1) ^ 0x1021
+            else:
+                crc <<= 1
+            crc &= 0xFFFF  # 16-bit 유지
+    return crc
+
+# Add Sum 계산 함수
+def add_sum(data: bytes) -> int:
+    return sum(data) & 0xFF  # 1바이트 값 유지
+
+# Exclusive OR (XOR) 계산 함수
+def xor_sum(data: bytes) -> int:
+    result = 0
+    for byte in data:
+        result ^= byte
+    return result
+
+# 바이트 입력 필드 추가 함수
+def add_byte_field(group_frame, byte_entries):
+    entry = tk.Entry(group_frame, width=4, justify="center")
+    entry.grid(row=0, column=len(byte_entries) + 1, padx=2, pady=2)
+    byte_entries.append(entry)
+
+# 입력 그룹 추가 함수
+def add_input_group():
+    group_frame = tk.Frame(frame)
+    group_frame.pack(pady=5, fill="x")
+
+    label = tk.Label(group_frame, text=f"입력 {len(input_groups) + 1}:")
+    label.grid(row=0, column=0, padx=5)
+
+    byte_entries = []
+    add_byte_field(group_frame, byte_entries)  # 기본 1바이트 입력 추가
+
+    add_byte_button = tk.Button(group_frame, text="+ 바이트 추가", command=lambda: add_byte_field(group_frame, byte_entries))
+    add_byte_button.grid(row=0, column=len(byte_entries) + 1, padx=5)
+
+    input_groups.append(byte_entries)
+
+# 입력값 변환 및 결과 출력 (새 창에서 표시)
+def process_input():
+    results = []
+    
+    for byte_entries in input_groups:
+        byte_values = []
+        for entry in byte_entries:
+            value = entry.get().strip()
+            if value:  # 빈 값 무시
+                try:
+                    byte_values.append(int(value, 16))
+                except ValueError:
+                    messagebox.showerror("오류", f"잘못된 바이트 입력: {value}")
+                    return
+
+        if not byte_values:
+            continue
+
+        data_bytes = bytes(byte_values)
+
+        # 선택된 체크섬 방식 계산
+        if checksum_var.get() == "ADD_SUM":
+            checksum_result = add_sum(data_bytes)
+            checksum_label = "ADD_SUM"
+        elif checksum_var.get() == "XOR":
+            checksum_result = xor_sum(data_bytes)
+            checksum_label = "XOR"
+        elif checksum_var.get() == "CRC16":
+            checksum_result = ccitt16_crc(data_bytes)
+            checksum_label = "CRC16"
+
+        # 결과 데이터 포맷
+        hex_values = " ".join(f"{b:02X}" for b in data_bytes)
+        results.append((hex_values, f"{checksum_label}: {checksum_result:02X}"))
+
+    # 결과 창 열기
+    show_results_window(results)
+
+# 결과를 표시하는 창
+def show_results_window(results):
+    if not results:
+        messagebox.showwarning("경고", "입력된 데이터가 없습니다.")
+        return
+
+    result_window = Toplevel(root)
+    result_window.title("변환 결과")
+    result_window.geometry("400x300")
+
+    tk.Label(result_window, text="입력값 | 체크섬 결과", font=("Arial", 12, "bold")).pack(pady=5)
+
+    result_frame = tk.Frame(result_window)
+    result_frame.pack(pady=5, fill="both", expand=True)
+
+    for i, (data, checksum) in enumerate(results):
+        tk.Label(result_frame, text=f"{data}  |  {checksum}", font=("Arial", 10), anchor="w").pack()
+
+# UI 설정
+root = tk.Tk()
+root.title("체크섬 선택 데이터 변환기")
+
+frame = tk.Frame(root, padx=10, pady=10)
+frame.pack(padx=10, pady=10)
+
+# 체크섬 방식 선택
+checksum_var = tk.StringVar(value="ADD_SUM")
+
+checksum_frame = tk.LabelFrame(frame, text="체크섬 방식 선택", padx=10, pady=5)
+checksum_frame.pack(pady=5, fill="x")
+
+tk.Radiobutton(checksum_frame, text="ADD_SUM", variable=checksum_var, value="ADD_SUM").pack(anchor="w")
+tk.Radiobutton(checksum_frame, text="XOR", variable=checksum_var, value="XOR").pack(anchor="w")
+tk.Radiobutton(checksum_frame, text="CRC16", variable=checksum_var, value="CRC16").pack(anchor="w")
+
+# 입력 그룹 추가 버튼
+add_group_button = tk.Button(frame, text="입력 추가", command=add_input_group)
+add_group_button.pack(pady=5)
+
+# 입력 그룹 리스트
+input_groups = []
+add_input_group()  # 기본 1개의 입력 그룹 추가
+
+# 변환 버튼
+process_button = tk.Button(frame, text="변환", command=process_input)
+process_button.pack(pady=10)
+
+root.mainloop()
