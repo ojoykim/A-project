@@ -1,0 +1,138 @@
+import tkinter as tk
+from tkinter import messagebox
+import serial
+
+# CCITT-16 CRC 계산 함수
+def ccitt16_crc(data: bytes) -> int:
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = (crc << 1) ^ 0x1021
+            else:
+                crc <<= 1
+            crc &= 0xFFFF  # 16-bit 유지
+    return crc
+
+# Add Sum 계산 함수
+def add_sum(data: bytes) -> int:
+    return sum(data) & 0xFF  # 1바이트 값 유지
+
+# Exclusive OR (XOR) 계산 함수
+def xor_sum(data: bytes) -> int:
+    result = 0
+    for byte in data:
+        result ^= byte
+    return result
+
+# 바이트 입력 필드 추가 함수
+def add_byte_field():
+    entry = tk.Entry(input_frame, width=4, justify="center")
+    entry.pack(side="left", padx=2, pady=2)
+    byte_entries.append(entry)
+
+# UART 데이터 전송 함수
+def send_uart_data(data_str):
+    try:
+        # UART 포트 설정
+        ser = serial.Serial(port_var.get(), int(baud_var.get()), timeout=1)
+        ser.write(data_str.encode('utf-8'))  # 문자열을 바이트로 변환 후 전송
+        ser.close()
+    except serial.SerialException as e:
+        messagebox.showerror("UART 오류", f"UART 전송 실패: {e}")
+
+# 변환 실행 함수
+def process_input():
+    byte_values = []
+    
+    for entry in byte_entries:
+        value = entry.get().strip()
+        if value:
+            try:
+                byte_values.append(int(value, 16))
+            except ValueError:
+                messagebox.showerror("오류", f"잘못된 바이트 입력: {value}")
+                return
+    
+    if not byte_values:
+        messagebox.showwarning("경고", "입력된 값이 없습니다.")
+        return
+
+    data_bytes = bytes(byte_values)
+
+    # 선택된 체크섬 방식 계산
+    if checksum_var.get() == "ADD_SUM":
+        checksum_result = add_sum(data_bytes)
+        checksum_label = "ADD_SUM"
+    elif checksum_var.get() == "XOR":
+        checksum_result = xor_sum(data_bytes)
+        checksum_label = "XOR_SUM"
+    elif checksum_var.get() == "CRC16":
+        checksum_result = ccitt16_crc(data_bytes)
+        checksum_label = "CCITT16"
+
+    # 결과 문자열 생성
+    hex_values = " ".join(f"{b:02X}" for b in data_bytes)
+    result_str = f"입력값: {hex_values} | {checksum_label}: {checksum_result:02X}\n"
+
+    # 출력 창에 결과 표시
+    output_text.config(state="normal")
+    output_text.delete("1.0", tk.END)
+    output_text.insert(tk.END, result_str)
+    output_text.config(state="disabled")
+
+    # UART로 데이터 전송
+    send_uart_data(result_str)
+
+# UI 설정
+root = tk.Tk()
+root.title("UART 체크섬 변환기")
+
+# 입력 프레임
+input_frame = tk.Frame(root)
+input_frame.pack(pady=10)
+
+tk.Label(input_frame, text="입력 값 (바이트 단위, 16진수)").pack(side="top")
+
+# 기본 바이트 입력 필드 1개 추가
+byte_entries = []
+add_byte_field()
+
+# 바이트 추가 버튼
+add_byte_button = tk.Button(root, text="+ 바이트 추가", command=add_byte_field)
+add_byte_button.pack(pady=5)
+
+# 체크섬 방식 선택
+checksum_var = tk.StringVar(value="ADD_SUM")
+
+checksum_frame = tk.LabelFrame(root, text="체크섬 방식 선택", padx=10, pady=5)
+checksum_frame.pack(pady=5)
+
+tk.Radiobutton(checksum_frame, text="ADD_SUM", variable=checksum_var, value="ADD_SUM").pack(anchor="w")
+tk.Radiobutton(checksum_frame, text="XOR_SUM", variable=checksum_var, value="XOR").pack(anchor="w")
+tk.Radiobutton(checksum_frame, text="CCITT16", variable=checksum_var, value="CRC16").pack(anchor="w")
+
+# UART 설정 프레임
+uart_frame = tk.LabelFrame(root, text="UART 설정", padx=10, pady=5)
+uart_frame.pack(pady=5)
+
+tk.Label(uart_frame, text="포트:").grid(row=0, column=0)
+port_var = tk.StringVar(value="COM3")  # Windows 기본 COM3, Linux/macOS는 '/dev/ttyUSB0'로 변경
+port_entry = tk.Entry(uart_frame, textvariable=port_var, width=10)
+port_entry.grid(row=0, column=1)
+
+tk.Label(uart_frame, text="Baud Rate:").grid(row=1, column=0)
+baud_var = tk.StringVar(value="9600")
+baud_entry = tk.Entry(uart_frame, textvariable=baud_var, width=10)
+baud_entry.grid(row=1, column=1)
+
+# 변환 버튼
+process_button = tk.Button(root, text="변환 및 UART 전송", command=process_input)
+process_button.pack(pady=10)
+
+# 결과 출력 창
+output_text = tk.Text(root, height=3, width=50, state="disabled", font=("Arial", 12))
+output_text.pack(pady=10)
+
+root.mainloop()
