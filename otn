@@ -1,0 +1,50 @@
+def lzw_compress(data):
+    dictionary = {chr(i): i for i in range(256)}
+    next_code = 256
+    compressed_data = []
+    w = ""
+
+    for c in data:
+        wc = w + c
+        if wc in dictionary:
+            w = wc
+        else:
+            compressed_data.append(dictionary[w])
+            dictionary[wc] = next_code
+            next_code += 1
+            w = c
+
+    if w:
+        compressed_data.append(dictionary[w])
+
+    return compressed_data
+
+
+
+import xml.etree.ElementTree as ET
+
+def create_xml(filename, compressed_data):
+    root = ET.Element("CompressedFile")
+    ET.SubElement(root, "Filename").text = filename
+    ET.SubElement(root, "Size").text = str(len(compressed_data))
+    
+    data_element = ET.SubElement(root, "Data")
+    data_element.text = ",".join(map(str, compressed_data[:50]))  # 미리보기 데이터 (50개까지만)
+
+    tree = ET.ElementTree(root)
+    xml_filename = filename + ".xml"
+    tree.write(xml_filename, encoding="utf-8", xml_declaration=True)
+    print(f"XML 생성 완료: {xml_filename}")
+    return xml_filename
+
+
+
+import tarfile
+
+def create_tar_archive(output_tar, files):
+    with tarfile.open(output_tar, "w") as tar:
+        for file in files:
+            tar.add(file)
+    
+    print(f"TAR 압축 완료: {output_tar}")
+    return output_tar
