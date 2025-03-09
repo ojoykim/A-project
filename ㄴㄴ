@@ -121,7 +121,7 @@ tk.Label(uart_frame, text="포트:").grid(row=0, column=0)
 port_var = tk.StringVar(value="COM3")  # Windows 기본 COM3, Linux/macOS는 '/dev/ttyUSB0'로 변경
 port_entry = tk.Entry(uart_frame, textvariable=port_var, width=10)
 port_entry.grid(row=0, column=1)
-
+ 
 tk.Label(uart_frame, text="Baud Rate:").grid(row=1, column=0)
 baud_var = tk.StringVar(value="9600")
 baud_entry = tk.Entry(uart_frame, textvariable=baud_var, width=10)
@@ -136,3 +136,39 @@ output_text = tk.Text(root, height=3, width=50, state="disabled", font=("Arial",
 output_text.pack(pady=10)
 
 root.mainloop()
+
+
+
+
+
+#include <stdio.h>
+
+#define BUILD_YEAR  (__DATE__[7]  * 1000 + __DATE__[8] * 100 + __DATE__[9] * 10 + __DATE__[10] - 53328) // "2025" → 정수 변환
+#define BUILD_MONTH (__DATE__[0] == 'J' && __DATE__[1] == 'a' ? 1  : \
+                     __DATE__[0] == 'F' ? 2  : \
+                     __DATE__[0] == 'M' && __DATE__[2] == 'r' ? 3  : \
+                     __DATE__[0] == 'A' && __DATE__[1] == 'p' ? 4  : \
+                     __DATE__[0] == 'M' ? 5  : \
+                     __DATE__[0] == 'J' && __DATE__[1] == 'u' ? 6  : \
+                     __DATE__[0] == 'J' ? 7  : \
+                     __DATE__[0] == 'A' ? 8  : \
+                     __DATE__[0] == 'S' ? 9  : \
+                     __DATE__[0] == 'O' ? 10 : \
+                     __DATE__[0] == 'N' ? 11 : 12)  // "Mar" → 3 변환
+#define BUILD_DAY   ((__DATE__[4] == ' ' ? 0 : __DATE__[4] - '0') * 10 + (__DATE__[5] - '0')) // "07" → 7
+
+#define BUILD_HOUR  ((__TIME__[0] - '0') * 10 + (__TIME__[1] - '0'))
+#define BUILD_MIN   ((__TIME__[3] - '0') * 10 + (__TIME__[4] - '0'))
+#define BUILD_SEC   ((__TIME__[6] - '0') * 10 + (__TIME__[7] - '0'))
+
+// 문자열로 변환
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+const char build_time[] = TOSTRING(BUILD_YEAR) "-" TOSTRING(BUILD_MONTH) "-" TOSTRING(BUILD_DAY) " "
+                         TOSTRING(BUILD_HOUR) ":" TOSTRING(BUILD_MIN) ":" TOSTRING(BUILD_SEC);
+
+int main() {
+    printf("Build Time: %s\n", build_time);
+    return 0;
+}
