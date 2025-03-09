@@ -123,3 +123,72 @@ output_label = tk.Label(frame, text="결과: ", fg="blue", font=("Arial", 12), j
 output_label.pack(pady=5)
 
 root.mainloop()
+
+
+
+
+
+class ConsoleApp:
+    def __init__(self):
+        """메뉴 설정"""
+        self.menu_stack = []  # ✅ 메뉴 이동 기록 (상위 메뉴로 돌아가기 용도)
+        self.main_menu = {
+            "1": ("서브 메뉴 1", self.sub_menu_1),
+            "2": ("서브 메뉴 2", self.sub_menu_2),
+            "exit": ("프로그램 종료", None),
+        }
+
+    def run(self):
+        """프로그램 실행 (메인 메뉴 표시)"""
+        self.menu_stack.append(self.main_menu)  # ✅ 처음 실행 시 메인 메뉴를 스택에 추가
+        self.show_menu()
+
+    def show_menu(self):
+        """현재 메뉴 표시 및 입력 처리"""
+        while self.menu_stack:
+            current_menu = self.menu_stack[-1]  # ✅ 현재 메뉴 가져오기
+            print("\n=== [메뉴] ===")
+            for key, (desc, _) in current_menu.items():
+                print(f"{key}. {desc}")
+
+            choice = input("👉 선택: ").strip().lower()
+
+            if choice in current_menu:
+                if choice == "exit":  # ✅ 프로그램 종료
+                    print("👋 프로그램을 종료합니다.")
+                    break
+                else:
+                    _, action = current_menu[choice]
+                    if action:
+                        action()  # ✅ 선택한 메뉴 함수 실행
+            elif choice == "back" and len(self.menu_stack) > 1:
+                self.menu_stack.pop()  # ✅ 상위 메뉴로 이동
+                print("🔼 상위 메뉴로 돌아갑니다.")
+            else:
+                print("⚠️ 올바른 입력이 아닙니다. 다시 입력하세요.")
+
+    def sub_menu_1(self):
+        """서브 메뉴 1"""
+        menu = {
+            "1": ("서브 명령어 1-1 실행", lambda: print("✅ 서브 명령어 1-1 실행 완료!")),
+            "2": ("서브 명령어 1-2 실행", lambda: print("✅ 서브 명령어 1-2 실행 완료!")),
+            "back": ("상위 메뉴로 돌아가기", None),
+        }
+        self.menu_stack.append(menu)  # ✅ 서브 메뉴에 진입하면 메뉴 스택에 추가
+        self.show_menu()
+
+    def sub_menu_2(self):
+        """서브 메뉴 2"""
+        menu = {
+            "1": ("서브 명령어 2-1 실행", lambda: print("✅ 서브 명령어 2-1 실행 완료!")),
+            "2": ("서브 명령어 2-2 실행", lambda: print("✅ 서브 명령어 2-2 실행 완료!")),
+            "back": ("상위 메뉴로 돌아가기", None),
+        }
+        self.menu_stack.append(menu)
+        self.show_menu()
+
+
+if __name__ == "__main__":
+    app = ConsoleApp()
+    app.run()
+
